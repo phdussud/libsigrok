@@ -295,6 +295,12 @@ src_libdrivers_la_SOURCES += \
 	src/hardware/beaglelogic/beaglelogic_native.c \
 	src/hardware/beaglelogic/beaglelogic_tcp.c
 endif
+if HW_BKPRECISION_1856D
+src_libdrivers_la_SOURCES += \
+	src/hardware/bkprecision-1856d/protocol.h \
+	src/hardware/bkprecision-1856d/protocol.c \
+	src/hardware/bkprecision-1856d/api.c
+endif
 if HW_BP5_BINMODE_FALA
 src_libdrivers_la_SOURCES += \
 	src/hardware/bp5-binmode-fala/protocol.h \
