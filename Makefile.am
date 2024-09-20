@@ -294,6 +294,12 @@ src_libdrivers_la_SOURCES += \
 	src/hardware/beaglelogic/beaglelogic_native.c \
 	src/hardware/beaglelogic/beaglelogic_tcp.c
 endif
+if HW_BP5_BINMODE_FALA
+src_libdrivers_la_SOURCES += \
+	src/hardware/bp5-binmode-fala/protocol.h \
+	src/hardware/bp5-binmode-fala/protocol.c \
+	src/hardware/bp5-binmode-fala/api.c
+endif
 if HW_CEM_DT_885X
 src_libdrivers_la_SOURCES += \
 	src/hardware/cem-dt-885x/protocol.h \
