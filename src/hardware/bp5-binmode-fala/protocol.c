@@ -69,6 +69,9 @@ SR_PRIV int bp5_binmode_fala_receive_data(int fd, int revents, void *cb_data)
 				sr_err("Sample buffer malloc failed.");
 				return FALSE;
 			}
+			std_session_send_df_frame_begin(sdi);
+			sr_session_send_meta(sdi, SR_CONF_SAMPLERATE,
+								 g_variant_new_uint64(devc->cur_samplerate));
 			if (serial_write_blocking(serial, "+", 1, 100) != 1)
 				return FALSE;
 			//next packet will be data
@@ -114,7 +117,8 @@ SR_PRIV int bp5_binmode_fala_receive_data(int fd, int revents, void *cb_data)
 
 					g_free(devc->raw_sample_buf);
 
-					//reset the parameters to prepare for next capture
+					std_session_send_df_frame_end(sdi);
+					// reset the parameters to prepare for next capture
 					devc->num_samples = 0;
 					devc->num_transfers = 0;
 
