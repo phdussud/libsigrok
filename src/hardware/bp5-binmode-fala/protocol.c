@@ -31,7 +31,6 @@ SR_PRIV int bp5_binmode_fala_receive_data(int fd, int revents, void *cb_data)
 	struct sr_datafeed_logic logic;
 	int len;
 	int offset;
-	fala_header hd;
 	(void)fd;
 	int k;
 	uint8_t sample;
@@ -48,6 +47,7 @@ SR_PRIV int bp5_binmode_fala_receive_data(int fd, int revents, void *cb_data)
 	if (revents == G_IO_IN) {
 		if (devc->num_transfers == 0)
 		{
+			fala_header hd;
 			len = serial_read_blocking(serial, read_buffer, 1024, 10);
 			if (len == 0)
 				return TRUE;
@@ -62,11 +62,15 @@ SR_PRIV int bp5_binmode_fala_receive_data(int fd, int revents, void *cb_data)
 				devc->limit_samples = hd.sample_count;
 				devc->num_logic_channels = hd.n_channels;
 				devc->cur_samplerate = hd.sample_rate;
+				devc->before_trigger_sample_count = hd.before_trigger_sample_count;
+				devc->trigger_channel_mask = hd.trigger_channel_mask;
+				devc->trigger_mask = hd.trigger_mask;
 			}
 			devc->raw_sample_buf = g_try_malloc(devc->limit_samples);
 			if (!devc->raw_sample_buf)
 			{
 				sr_err("Sample buffer malloc failed.");
+				sdi->driver->dev_acquisition_stop(sdi);
 				return FALSE;
 			}
 			std_session_send_df_frame_begin(sdi);
@@ -100,19 +104,34 @@ SR_PRIV int bp5_binmode_fala_receive_data(int fd, int revents, void *cb_data)
 				devc->num_samples++;
 				offset = (devc->limit_samples - devc->num_samples) * devc->logic_unitsize;
 				devc->raw_sample_buf[offset] = sample;
-				/* Ignore it if we've read enough. */
 				if (devc->num_samples >= devc->limit_samples)
 				{
-					int num_pre_trigger_samples = 0;
+					int num_pre_trigger_samples = MIN(devc->before_trigger_sample_count, devc->num_samples);
+					if (devc->trigger_channel_mask)
+					{
+						if (num_pre_trigger_samples != 0)
+						{
+							packet.type = SR_DF_LOGIC;
+							packet.payload = &logic;
+							logic.length = num_pre_trigger_samples * devc->logic_unitsize;
+							logic.unitsize = devc->logic_unitsize;
+							logic.data = devc->raw_sample_buf +
+										(devc->limit_samples - devc->num_samples) *
+											devc->logic_unitsize;
+							sr_session_send(sdi, &packet);
+
+						}
+						std_session_send_df_trigger(sdi);
+					}
 					packet.type = SR_DF_LOGIC;
 					packet.payload = &logic;
 					logic.length =
 						(devc->num_samples - num_pre_trigger_samples) * devc->logic_unitsize;
 					logic.unitsize = devc->logic_unitsize;
 					logic.data = devc->raw_sample_buf +
-								(num_pre_trigger_samples + devc->limit_samples -
-								devc->num_samples) *
-									devc->logic_unitsize;
+									(num_pre_trigger_samples + devc->limit_samples -
+									devc->num_samples) *
+										devc->logic_unitsize;
 					sr_session_send(sdi, &packet);
 
 					g_free(devc->raw_sample_buf);
