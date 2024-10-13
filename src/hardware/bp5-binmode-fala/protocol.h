@@ -46,6 +46,9 @@ struct dev_context
     size_t logic_unitsize;
     uint64_t all_logic_channels_mask;
     uint8_t *raw_sample_buf;
+    uint32_t before_trigger_sample_count;
+    uint32_t trigger_channel_mask;
+    uint32_t trigger_mask;
 };
 
 
