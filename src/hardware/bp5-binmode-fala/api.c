@@ -29,6 +29,8 @@
 #include <unistd.h>
 #include "protocol.h"
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 #define SERIALCOMM "115200/8n1/dtr=1/rts=0/flow=0"
 
 static const uint32_t scanopts[] = {
@@ -163,12 +165,15 @@ scan(struct sr_dev_driver *di, GSList *options)
 		return NULL;
 	}
 	if (serial_write_blocking(serial, "?", 1, 100) != 1)
+	{
+		serial_close(serial);
 		return NULL;
-	len = serial_read_blocking(serial, buf, (sizeof(buf) / sizeof(buf[0])), 100); //$FALADATA;8;0;0;N;8000000;0;0;
-
+	}
+	len = serial_read_blocking(serial, buf, ARRAY_SIZE(buf), 100); //$FALADATA;8;0;0;N;8000000;0;0;
 	if (len < 18 || !parse_header(buf, &hd))
 	{
 		sr_err("identify failed");
+		serial_close(serial);
 		return NULL;
 	}
 
@@ -187,8 +192,6 @@ scan(struct sr_dev_driver *di, GSList *options)
 	devc->all_logic_channels_mask <<= devc->num_logic_channels;
 	devc->all_logic_channels_mask--;
 	devc->limit_samples = hd.sample_count;
-	// devc->limit_frames = hd.;
-	// devc->capture_ratio = 20;
 
 	for (i = 0; i < ch_max; i++)
 	{
